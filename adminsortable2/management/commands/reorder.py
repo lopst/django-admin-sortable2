@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
-
+import json
 from django.apps import apps
 from django.core.management.base import BaseCommand, CommandError
 
@@ -10,9 +10,13 @@ class Command(BaseCommand):
     help = 'Restore the primary ordering fields of a model containing a special ordering field'
 
     def add_arguments(self, parser):
-        parser.add_argument('models', nargs='+', type=str)
+        parser.add_argument('models', nargs='+', type=str, help='Models list.')
+        parser.add_argument('-f', '--filter', type=str, help='Extra filter.')
 
     def handle(self, *args, **options):
+
+        qs_filter = options['filter'] if options['filter'] else None
+
         for modelname in options['models']:
             try:
                 app_label, model_name = modelname.rsplit('.', 1)
@@ -27,7 +31,13 @@ class Command(BaseCommand):
             if orderfield[0] == '-':
                 orderfield = orderfield[1:]
 
-            for order, obj in enumerate(Model.objects.iterator(), start=1):
+            qs = Model.objects
+
+            if qs_filter:
+                qs_filter = json.loads(qs_filter)
+                qs = qs.filter(**qs_filter)
+
+            for order, obj in enumerate(qs.iterator(), start=1):
                 setattr(obj, orderfield, order)
                 obj.save()
 

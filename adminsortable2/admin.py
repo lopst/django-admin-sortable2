@@ -20,6 +20,7 @@ from django.contrib import admin, messages
 from django.core.exceptions import ImproperlyConfigured
 from django.core.paginator import EmptyPage
 from django.core.serializers.json import DjangoJSONEncoder
+from django.core.management import call_command
 try:
     from django.urls import reverse
 except ImportError:  # Django<1.11
@@ -305,12 +306,15 @@ class SortableAdminMixin(SortableAdminBase):
             try:
                 obj = model.objects.get(**obj_filters)
             except model.MultipleObjectsReturned:
+                # if an error ocurred, try auto fix it
+                if extra_model_filters:
+                    call_command('reorder', 'contents.Content', '--filter=%s'%(json.dumps(extra_model_filters),))
                 msg = "Detected non-unique values in field '{0}' used for sorting this model.\nConsider to run \n"\
                       "    python manage.py reorder {1}\n"\
                       "to adjust this inconsistency."
                 # noinspection PyProtectedMember
-                raise model.MultipleObjectsReturned(msg.format(rank_field, model._meta.label))
-
+                # raise model.MultipleObjectsReturned(msg.format(rank_field, model._meta.label))
+                return {}
             move_qs = model.objects.filter(**move_filter).order_by(order_by)
             move_objs = list(move_qs)
             for instance in move_objs:
@@ -341,12 +345,19 @@ class SortableAdminMixin(SortableAdminBase):
 
     def get_extra_model_filters(self, request):
         """
-        Returns additional fields to filter sortable objects
+        Returns a dict of additional fields to filter sortable objects
         """
-        return {}
+        if hasattr(self.model, 'ordering_extra_model_filter'):
+            return self.model.ordering_extra_model_filter(request)
+        else:
+            return {}
 
     def get_max_order(self, request, obj=None):
-        return self.model.objects.aggregate(max_order=Coalesce(Max(self.default_order_field), 0))['max_order']
+        extra_filers = self.get_extra_model_filters(request)
+        qs = self.model.objects.all()
+        if extra_filers:
+            qs = qs.filter(**extra_filers)
+        return qs.aggregate(max_order=Coalesce(Max(self.default_order_field), 0))['max_order']
 
     def _bulk_move(self, request, queryset, method):
         if not self.enable_sorting:
