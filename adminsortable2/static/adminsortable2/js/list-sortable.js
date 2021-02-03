@@ -59,7 +59,8 @@ django.jQuery(function($) {
 				return;
 			}
 			startorder = $(dragged_rows.item[0]).find('div.drag').attr('order');
-
+			var $modal = window.jQuery('#myModal')[0]
+			$modal.style.display = "block";
 			$.ajax({
 				url: config.update_url,
 				type: 'POST',
@@ -74,9 +75,11 @@ django.jQuery(function($) {
 							$(this).find('div.drag').attr('order', item.order);
 						});
 					});
+					$modal.style.display = "none";
 				},
 				error: function (response) {
 					console.error('The server responded: ' + response.responseText);
+					$modal.style.display = "none";
 				}
 			});
 		}

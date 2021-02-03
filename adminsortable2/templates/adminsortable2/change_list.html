@@ -11,3 +11,17 @@
 		}
 	</script>
 {% endblock %}
+
+{% block content %}
+	{{ block.super }}
+	<!-- The Modal -->
+	<div id="myModal" class="modal">
+
+	<!-- Modal content -->
+	<div class="modal-content">
+	  <span class="close">&times;</span>
+	  <p><span class="spin">&#9718</span> {% trans "Updating..." %}</p>
+	</div>
+  
+  </div>
+{% endblock %}
